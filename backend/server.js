@@ -8,6 +8,8 @@ import authRoutes from "./routes/authRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import topicRoutes from "./routes/topicRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import subTopicRoutes from "./routes/subTopicRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 // Prefer IPv4 over IPv6
 dns.setDefaultResultOrder("ipv4first");
 
@@ -25,6 +27,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/topics", topicRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/subtopics", subTopicRoutes);
+app.use("/api/profile", profileRoutes);
+
 app.get("/", (req, res) => {
   res.json({
     success: true,

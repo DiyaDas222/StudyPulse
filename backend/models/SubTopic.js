@@ -1,24 +1,10 @@
 import mongoose from "mongoose";
 
-const subTopicSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-
-  status: {
-    type: String,
-    enum: ["not_started", "in_progress", "done"],
-    default: "not_started",
-  },
-});
-
-const topicSchema = new mongoose.Schema(
+const subTopicSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Topic title is required"],
+      required: [true, "Subtopic title is required"],
       trim: true,
     },
 
@@ -34,7 +20,11 @@ const topicSchema = new mongoose.Schema(
       default: "not_started",
     },
 
-    subTopics: [subTopicSchema],
+    topic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Topic",
+      required: true,
+    },
 
     subject: {
       type: mongoose.Schema.Types.ObjectId,
@@ -53,4 +43,6 @@ const topicSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model("Topic", topicSchema);
+const SubTopic = mongoose.model("SubTopic", subTopicSchema);
+
+export default SubTopic;

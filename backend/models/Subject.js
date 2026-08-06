@@ -18,20 +18,42 @@ const subjectSchema = new mongoose.Schema(
       type: String,
       default: "#3B82F6",
     },
+
     progress: {
-  type: Number,
-  default: 0,
-},
+      type: Number,
+      default: 0,
+    },
 
-totalTopics: {
-  type: Number,
-  default: 0,
-},
+    totalTopics: {
+      type: Number,
+      default: 0,
+    },
 
-completedTopics: {
-  type: Number,
-  default: 0,
-},
+    completedTopics: {
+      type: Number,
+      default: 0,
+    },
+
+    // NEW
+    visibility: {
+      type: String,
+      enum: ["private", "public", "group"],
+      default: "private",
+    },
+
+    // NEW
+    inviteCode: {
+      type: String,
+      default: null,
+    },
+
+    // NEW
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
 
     user: {
       type: mongoose.Schema.Types.ObjectId,

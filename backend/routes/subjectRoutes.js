@@ -3,6 +3,8 @@ import express from "express";
 import {
   createSubject,
   getSubjects,
+  getPublicSubjects,
+  joinGroup,
   getSubjectById,
   updateSubject,
   deleteSubject,
@@ -12,19 +14,22 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Create Subject
+// ==========================
+// Subject CRUD
+// ==========================
+
 router.post("/", authMiddleware, createSubject);
 
-// Get All Subjects
 router.get("/", authMiddleware, getSubjects);
 
-// Get Single Subject
+router.get("/public", authMiddleware, getPublicSubjects);
+
+router.post("/join", authMiddleware, joinGroup);
+
 router.get("/:id", authMiddleware, getSubjectById);
 
-// Update Subject
 router.put("/:id", authMiddleware, updateSubject);
 
-// Delete Subject
 router.delete("/:id", authMiddleware, deleteSubject);
 
 export default router;
