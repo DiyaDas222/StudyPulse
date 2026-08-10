@@ -35,6 +35,9 @@ export default function Groups() {
     }
   };
 
+  // ==========================================
+  // Copy Invite Code
+  // ==========================================
   const copyInviteCode = async (code) => {
     if (!code) {
       toast.error("Invite code unavailable");
@@ -43,12 +46,17 @@ export default function Groups() {
 
     try {
       await navigator.clipboard.writeText(code);
+
       toast.success("Invite code copied!");
     } catch (error) {
+      console.error(error);
       toast.error("Unable to copy invite code");
     }
   };
 
+  // ==========================================
+  // Copy Invite Link
+  // ==========================================
   const copyInviteLink = async (code) => {
     if (!code) {
       toast.error("Invite code unavailable");
@@ -56,12 +64,16 @@ export default function Groups() {
     }
 
     const link =
-      `${window.location.origin}/groups?invite=${encodeURIComponent(code)}`;
+      `${window.location.origin}/explore?invite=${encodeURIComponent(
+        code
+      )}`;
 
     try {
       await navigator.clipboard.writeText(link);
+
       toast.success("Invite link copied!");
     } catch (error) {
+      console.error(error);
       toast.error("Unable to copy invite link");
     }
   };
@@ -77,7 +89,10 @@ export default function Groups() {
 
         <main className="p-8">
 
+          {/* Header */}
+
           <div>
+
             <h1 className="text-4xl font-bold text-slate-800">
               My Groups
             </h1>
@@ -85,17 +100,24 @@ export default function Groups() {
             <p className="text-gray-500 mt-2">
               Collaborate with classmates and track shared progress.
             </p>
+
           </div>
+
+          {/* Loading */}
 
           {loading ? (
 
             <div className="bg-white rounded-3xl shadow-lg p-10 mt-10 text-center">
+
               <p className="font-semibold text-gray-600">
                 Loading groups...
               </p>
+
             </div>
 
           ) : groups.length === 0 ? (
+
+            /* Empty State */
 
             <div className="bg-white rounded-3xl shadow-lg p-12 mt-10 text-center">
 
@@ -122,6 +144,8 @@ export default function Groups() {
 
           ) : (
 
+            /* Groups */
+
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 mt-10">
 
               {groups.map((group) => {
@@ -141,6 +165,7 @@ export default function Groups() {
                     <div className="flex justify-between items-start gap-4">
 
                       <div>
+
                         <h2 className="text-2xl font-bold text-slate-800">
                           {group.name}
                         </h2>
@@ -149,6 +174,7 @@ export default function Groups() {
                           {group.description ||
                             "No description added."}
                         </p>
+
                       </div>
 
                       <span className="shrink-0 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
@@ -192,7 +218,7 @@ export default function Groups() {
 
                     </div>
 
-                    {/* Invite */}
+                    {/* Invite Code */}
 
                     <div className="mt-6 bg-purple-50 rounded-2xl p-4">
 
@@ -227,8 +253,11 @@ export default function Groups() {
                       <div className="flex items-center justify-between">
 
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
+
                           <FaUsers className="text-indigo-600" />
+
                           Members
+
                         </h3>
 
                         <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">
@@ -255,6 +284,7 @@ export default function Groups() {
                             >
 
                               <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+
                                 {(
                                   member.name ||
                                   member.email ||
@@ -262,6 +292,7 @@ export default function Groups() {
                                 )
                                   .charAt(0)
                                   .toUpperCase()}
+
                               </div>
 
                               <div className="min-w-0">
