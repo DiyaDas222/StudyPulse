@@ -56,7 +56,9 @@ export const getSubjects = async (req, res) => {
   try {
     const subjects = await Subject.find({
       members: req.user.id,
-    }).sort({ createdAt: -1 });
+    })
+      .populate("members", "name email")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -101,8 +103,16 @@ export const joinGroup = async (req, res) => {
   try {
     const { inviteCode } = req.body;
 
+    if (!inviteCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Invite code is required",
+      });
+    }
+
     const subject = await Subject.findOne({
-      inviteCode,
+      inviteCode: inviteCode.trim(),
+      visibility: "group",
     });
 
     if (!subject) {
@@ -112,15 +122,26 @@ export const joinGroup = async (req, res) => {
       });
     }
 
-    if (!subject.members.includes(req.user.id)) {
+    const alreadyMember = subject.members.some(
+      (memberId) =>
+        memberId.toString() === req.user.id.toString()
+    );
+
+    if (!alreadyMember) {
       subject.members.push(req.user.id);
       await subject.save();
     }
 
+    const updatedSubject = await Subject.findById(
+      subject._id
+    ).populate("members", "name email");
+
     res.status(200).json({
       success: true,
-      message: "Joined successfully",
-      subject,
+      message: alreadyMember
+        ? "You are already a member of this group"
+        : "Joined group successfully",
+      subject: updatedSubject,
     });
   } catch (error) {
     res.status(500).json({
@@ -135,7 +156,9 @@ export const joinGroup = async (req, res) => {
 // =============================
 export const getSubjectById = async (req, res) => {
   try {
-    const subject = await Subject.findById(req.params.id);
+    const subject = await Subject.findById(
+      req.params.id
+    ).populate("members", "name email");
 
     if (!subject) {
       return res.status(404).json({
@@ -161,7 +184,9 @@ export const getSubjectById = async (req, res) => {
 // =============================
 export const updateSubject = async (req, res) => {
   try {
-    const subject = await Subject.findById(req.params.id);
+    const subject = await Subject.findById(
+      req.params.id
+    );
 
     if (!subject) {
       return res.status(404).json({
@@ -170,18 +195,52 @@ export const updateSubject = async (req, res) => {
       });
     }
 
-    subject.name = req.body.name || subject.name;
+    const oldVisibility = subject.visibility;
+
+    subject.name =
+      req.body.name || subject.name;
+
     subject.description =
-      req.body.description ?? subject.description;
-    subject.color = req.body.color || subject.color;
+      req.body.description ??
+      subject.description;
+
+    subject.color =
+      req.body.color || subject.color;
+
     subject.visibility =
-      req.body.visibility || subject.visibility;
+      req.body.visibility ||
+      subject.visibility;
+
+    // Generate invite code when changing
+    // a subject into a group.
+    if (
+      subject.visibility === "group" &&
+      oldVisibility !== "group" &&
+      !subject.inviteCode
+    ) {
+      subject.inviteCode =
+        crypto.randomBytes(4).toString("hex");
+
+      if (!subject.members.includes(req.user.id)) {
+        subject.members.push(req.user.id);
+      }
+    }
+
+    // Remove invite code if no longer a group.
+    if (subject.visibility !== "group") {
+      subject.inviteCode = null;
+    }
 
     await subject.save();
 
+    const updatedSubject = await Subject.findById(
+      subject._id
+    ).populate("members", "name email");
+
     res.status(200).json({
       success: true,
-      subject,
+      message: "Subject updated successfully",
+      subject: updatedSubject,
     });
   } catch (error) {
     res.status(500).json({
@@ -196,7 +255,9 @@ export const updateSubject = async (req, res) => {
 // =============================
 export const deleteSubject = async (req, res) => {
   try {
-    const subject = await Subject.findById(req.params.id);
+    const subject = await Subject.findById(
+      req.params.id
+    );
 
     if (!subject) {
       return res.status(404).json({

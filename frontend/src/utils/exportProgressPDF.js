@@ -35,33 +35,30 @@ export const exportProgressPDF = async ({
   const imageHeight =
     (canvas.height * contentWidth) / canvas.width;
 
-  let remainingHeight = imageHeight;
-  let position = margin;
+  let heightLeft = imageHeight;
+  let position = 18;
 
-  // Header
-  pdf.setFontSize(18);
   pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(18);
   pdf.text("StudyPulse", margin, 8);
 
-  pdf.setFontSize(10);
   pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
   pdf.text("Learning Progress Report", margin, 14);
 
-  // First page
   pdf.addImage(
     imageData,
     "PNG",
     margin,
-    position + 8,
+    position,
     contentWidth,
     imageHeight
   );
 
-  remainingHeight -= pageHeight - margin - 8;
+  heightLeft -= pageHeight - position;
 
-  // Additional pages
-  while (remainingHeight > 0) {
-    position = remainingHeight - imageHeight + margin;
+  while (heightLeft > 0) {
+    position = heightLeft - imageHeight + margin;
 
     pdf.addPage();
 
@@ -74,8 +71,10 @@ export const exportProgressPDF = async ({
       imageHeight
     );
 
-    remainingHeight -= pageHeight - margin;
+    heightLeft -= pageHeight - margin;
   }
 
   pdf.save(fileName);
 };
+
+export default exportProgressPDF;
