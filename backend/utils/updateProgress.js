@@ -2,7 +2,6 @@ import Subject from "../models/Subject.js";
 import Topic from "../models/Topic.js";
 
 const updateProgress = async (subjectId) => {
-
   const totalTopics = await Topic.countDocuments({
     subject: subjectId,
   });
@@ -25,7 +24,6 @@ const updateProgress = async (subjectId) => {
     completedTopics,
     progress,
   });
-
 };
 
 export default updateProgress;

@@ -1,7 +1,10 @@
 import updateProgress from "../utils/updateProgress.js";
 import Topic from "../models/Topic.js";
+import Subject from "../models/Subject.js";
 
+// =============================
 // Create Topic
+// =============================
 export const createTopic = async (req, res) => {
   try {
     const { title, description, subject } = req.body;
@@ -13,12 +16,26 @@ export const createTopic = async (req, res) => {
       });
     }
 
+    const subjectExists = await Subject.findOne({
+      _id: subject,
+      user: req.user.id,
+    });
+
+    if (!subjectExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Subject not found",
+      });
+    }
+
     const topic = await Topic.create({
       title,
       description,
       subject,
       user: req.user.id,
+      status: "not_started",
     });
+
     await updateProgress(subject);
 
     res.status(201).json({
@@ -34,7 +51,9 @@ export const createTopic = async (req, res) => {
   }
 };
 
+// =============================
 // Get Topics of a Subject
+// =============================
 export const getTopics = async (req, res) => {
   try {
     const topics = await Topic.find({
@@ -55,7 +74,9 @@ export const getTopics = async (req, res) => {
   }
 };
 
+// =============================
 // Update Topic
+// =============================
 export const updateTopic = async (req, res) => {
   try {
     const topic = await Topic.findOne({
@@ -71,9 +92,29 @@ export const updateTopic = async (req, res) => {
     }
 
     topic.title = req.body.title || topic.title;
-    topic.description = req.body.description ?? topic.description;
+    topic.description =
+      req.body.description ?? topic.description;
+
+    if (req.body.status) {
+      const allowedStatuses = [
+        "not_started",
+        "in_progress",
+        "done",
+      ];
+
+      if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid topic status",
+        });
+      }
+
+      topic.status = req.body.status;
+    }
 
     await topic.save();
+
+    await updateProgress(topic.subject);
 
     res.status(200).json({
       success: true,
@@ -88,7 +129,9 @@ export const updateTopic = async (req, res) => {
   }
 };
 
+// =============================
 // Delete Topic
+// =============================
 export const deleteTopic = async (req, res) => {
   try {
     const topic = await Topic.findOne({
@@ -103,8 +146,11 @@ export const deleteTopic = async (req, res) => {
       });
     }
 
+    const subjectId = topic.subject;
+
     await topic.deleteOne();
-    await updateProgress(topic.subject);
+
+    await updateProgress(subjectId);
 
     res.status(200).json({
       success: true,
@@ -118,7 +164,9 @@ export const deleteTopic = async (req, res) => {
   }
 };
 
-// Toggle Topic Completion
+// =============================
+// Change Topic Status
+// =============================
 export const toggleTopic = async (req, res) => {
   try {
     const topic = await Topic.findOne({
@@ -133,9 +181,23 @@ export const toggleTopic = async (req, res) => {
       });
     }
 
-    topic.completed = !topic.completed;
+    const statusOrder = [
+      "not_started",
+      "in_progress",
+      "done",
+    ];
+
+    const currentIndex = statusOrder.indexOf(
+      topic.status || "not_started"
+    );
+
+    const nextIndex =
+      (currentIndex + 1) % statusOrder.length;
+
+    topic.status = statusOrder[nextIndex];
 
     await topic.save();
+
     await updateProgress(topic.subject);
 
     res.status(200).json({
