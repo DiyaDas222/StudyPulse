@@ -152,6 +152,159 @@ export const joinGroup = async (req, res) => {
 };
 
 // =============================
+// Leave Group
+// =============================
+export const leaveGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const subject = await Subject.findById(id);
+
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: "Group not found",
+      });
+    }
+
+    if (subject.visibility !== "group") {
+      return res.status(400).json({
+        success: false,
+        message: "This subject is not a group",
+      });
+    }
+
+    const userId = req.user.id.toString();
+
+    // Group owner cannot leave
+    if (subject.user.toString() === userId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Group owner cannot leave the group. Delete the group instead.",
+      });
+    }
+
+    const isMember = subject.members.some(
+      (memberId) =>
+        memberId.toString() === userId
+    );
+
+    if (!isMember) {
+      return res.status(400).json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    subject.members = subject.members.filter(
+      (memberId) =>
+        memberId.toString() !== userId
+    );
+
+    await subject.save();
+
+    const updatedSubject = await Subject.findById(
+      subject._id
+    ).populate("members", "name email");
+
+    res.status(200).json({
+      success: true,
+      message: "You left the group successfully",
+      subject: updatedSubject,
+    });
+  } catch (error) {
+    console.error("Leave group error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// =============================
+// Remove Member
+// =============================
+export const removeMember = async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+
+    const subject = await Subject.findById(id);
+
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: "Group not found",
+      });
+    }
+
+    if (subject.visibility !== "group") {
+      return res.status(400).json({
+        success: false,
+        message: "This subject is not a group",
+      });
+    }
+
+    const currentUserId = req.user.id.toString();
+
+    // Only group owner can remove members
+    if (subject.user.toString() !== currentUserId) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only the group owner can remove members",
+      });
+    }
+
+    // Owner cannot remove themselves
+    if (memberId === currentUserId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Group owner cannot remove themselves",
+      });
+    }
+
+    const isMember = subject.members.some(
+      (member) =>
+        member.toString() === memberId.toString()
+    );
+
+    if (!isMember) {
+      return res.status(404).json({
+        success: false,
+        message: "Member is not part of this group",
+      });
+    }
+
+    subject.members = subject.members.filter(
+      (member) =>
+        member.toString() !== memberId.toString()
+    );
+
+    await subject.save();
+
+    const updatedSubject = await Subject.findById(
+      subject._id
+    ).populate("members", "name email");
+
+    res.status(200).json({
+      success: true,
+      message: "Member removed successfully",
+      subject: updatedSubject,
+    });
+  } catch (error) {
+    console.error("Remove member error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// =============================
 // Get Single Subject
 // =============================
 export const getSubjectById = async (req, res) => {
@@ -221,7 +374,13 @@ export const updateSubject = async (req, res) => {
       subject.inviteCode =
         crypto.randomBytes(4).toString("hex");
 
-      if (!subject.members.includes(req.user.id)) {
+      if (
+        !subject.members.some(
+          (memberId) =>
+            memberId.toString() ===
+            req.user.id.toString()
+        )
+      ) {
         subject.members.push(req.user.id);
       }
     }

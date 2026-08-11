@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, "Name is required"],
+      trim: true,
     },
 
     email: {
@@ -12,11 +13,24 @@ const userSchema = new mongoose.Schema(
       required: [true, "Email is required"],
       unique: true,
       lowercase: true,
+      trim: true,
     },
 
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false,
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
   },
   {

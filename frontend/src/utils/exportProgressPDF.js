@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 
 export const exportProgressPDF = async ({
   elementId,
@@ -11,11 +11,18 @@ export const exportProgressPDF = async ({
     throw new Error("Progress report content not found");
   }
 
+  // Give charts/layout a moment to finish rendering
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   const canvas = await html2canvas(element, {
-    scale: 2,
+    scale: 1.5,
     useCORS: true,
-    backgroundColor: "#ffffff",
+    allowTaint: false,
+    backgroundColor: "#f1f5f9",
     logging: false,
+    imageTimeout: 15000,
+    windowWidth: element.scrollWidth,
+    windowHeight: element.scrollHeight,
   });
 
   const imageData = canvas.toDataURL("image/png");
@@ -30,13 +37,20 @@ export const exportProgressPDF = async ({
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   const margin = 10;
+  const headerHeight = 15;
+
   const contentWidth = pageWidth - margin * 2;
 
   const imageHeight =
     (canvas.height * contentWidth) / canvas.width;
 
   let heightLeft = imageHeight;
-  let position = 18;
+
+  let position = margin + headerHeight;
+
+  // ==============================
+  // First page header
+  // ==============================
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
@@ -44,7 +58,11 @@ export const exportProgressPDF = async ({
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
-  pdf.text("Learning Progress Report", margin, 14);
+  pdf.text("Learning Progress Report", margin, 13);
+
+  // ==============================
+  // First page
+  // ==============================
 
   pdf.addImage(
     imageData,
@@ -55,12 +73,18 @@ export const exportProgressPDF = async ({
     imageHeight
   );
 
-  heightLeft -= pageHeight - position;
+  heightLeft -=
+    pageHeight - position - margin;
+
+  // ==============================
+  // Additional pages
+  // ==============================
 
   while (heightLeft > 0) {
-    position = heightLeft - imageHeight + margin;
-
     pdf.addPage();
+
+    position =
+      margin - imageHeight + heightLeft;
 
     pdf.addImage(
       imageData,
@@ -71,8 +95,13 @@ export const exportProgressPDF = async ({
       imageHeight
     );
 
-    heightLeft -= pageHeight - margin;
+    heightLeft -=
+      pageHeight - margin * 2;
   }
+
+  // ==============================
+  // Save
+  // ==============================
 
   pdf.save(fileName);
 };

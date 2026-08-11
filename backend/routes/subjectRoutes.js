@@ -5,6 +5,8 @@ import {
   getSubjects,
   getPublicSubjects,
   joinGroup,
+  leaveGroup,
+  removeMember,
   getSubjectById,
   updateSubject,
   deleteSubject,
@@ -24,7 +26,27 @@ router.get("/", authMiddleware, getSubjects);
 
 router.get("/public", authMiddleware, getPublicSubjects);
 
+// ==========================
+// Group
+// ==========================
+
 router.post("/join", authMiddleware, joinGroup);
+
+router.delete(
+  "/:id/members/:memberId",
+  authMiddleware,
+  removeMember
+);
+
+router.delete(
+  "/:id/leave",
+  authMiddleware,
+  leaveGroup
+);
+
+// ==========================
+// Single Subject
+// ==========================
 
 router.get("/:id", authMiddleware, getSubjectById);
 

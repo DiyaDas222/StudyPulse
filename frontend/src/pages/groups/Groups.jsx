@@ -5,17 +5,34 @@ import {
   FaUsers,
   FaCopy,
   FaExternalLinkAlt,
+  FaSignOutAlt,
+  FaTrash,
+  FaCrown,
 } from "react-icons/fa";
 
 import Sidebar from "../../components/common/Sidebar";
 import Navbar from "../../components/common/Navbar";
 
-import { getMyGroups } from "../../services/groupService";
+import { useAuth } from "../../context/AuthContext";
+
+import {
+  getMyGroups,
+  leaveGroup,
+  removeMember,
+} from "../../services/groupService";
 
 export default function Groups() {
+  const { user } = useAuth();
+
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [leavingId, setLeavingId] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
+
+  // ==========================================
+  // Fetch Groups
+  // ==========================================
   useEffect(() => {
     fetchGroups();
   }, []);
@@ -29,11 +46,23 @@ export default function Groups() {
       setGroups(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
-      toast.error("Unable to load groups");
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to load groups"
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  // ==========================================
+  // Current User ID
+  // ==========================================
+  const currentUserId =
+    user?._id ||
+    user?.id ||
+    user?.userId;
 
   // ==========================================
   // Copy Invite Code
@@ -50,6 +79,7 @@ export default function Groups() {
       toast.success("Invite code copied!");
     } catch (error) {
       console.error(error);
+
       toast.error("Unable to copy invite code");
     }
   };
@@ -74,12 +104,113 @@ export default function Groups() {
       toast.success("Invite link copied!");
     } catch (error) {
       console.error(error);
+
       toast.error("Unable to copy invite link");
+    }
+  };
+
+  // ==========================================
+  // Leave Group
+  // ==========================================
+  const handleLeaveGroup = async (group) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to leave "${group.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLeavingId(group._id);
+
+      await leaveGroup(group._id);
+
+      toast.success(
+        "You left the group successfully"
+      );
+
+      setGroups((currentGroups) =>
+        currentGroups.filter(
+          (item) => item._id !== group._id
+        )
+      );
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to leave group"
+      );
+    } finally {
+      setLeavingId(null);
+    }
+  };
+
+  // ==========================================
+  // Remove Member
+  // ==========================================
+  const handleRemoveMember = async (
+    group,
+    member
+  ) => {
+    const memberName =
+      member?.name ||
+      member?.email ||
+      "this member";
+
+    const confirmed = window.confirm(
+      `Remove ${memberName} from "${group.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setRemovingId(member._id);
+
+      const response = await removeMember(
+        group._id,
+        member._id
+      );
+
+      toast.success(
+        response?.message ||
+          "Member removed successfully"
+      );
+
+      // Update only the affected group
+      setGroups((currentGroups) =>
+        currentGroups.map((item) => {
+          if (item._id !== group._id) {
+            return item;
+          }
+
+          return {
+            ...item,
+            members: (item.members || []).filter(
+              (currentMember) =>
+                currentMember._id !== member._id
+            ),
+          };
+        })
+      );
+    } catch (error) {
+      console.error(
+        "Remove member error:",
+        error
+      );
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to remove member"
+      );
+    } finally {
+      setRemovingId(null);
     }
   };
 
   return (
     <div className="flex min-h-screen bg-slate-100">
+
+      {/* Sidebar */}
 
       <Sidebar />
 
@@ -89,7 +220,9 @@ export default function Groups() {
 
         <main className="p-8">
 
-          {/* Header */}
+          {/* ==================================
+              Header
+          ================================== */}
 
           <div>
 
@@ -103,7 +236,9 @@ export default function Groups() {
 
           </div>
 
-          {/* Loading */}
+          {/* ==================================
+              Loading
+          ================================== */}
 
           {loading ? (
 
@@ -117,7 +252,9 @@ export default function Groups() {
 
           ) : groups.length === 0 ? (
 
-            /* Empty State */
+            /* ==================================
+               Empty State
+            ================================== */
 
             <div className="bg-white rounded-3xl shadow-lg p-12 mt-10 text-center">
 
@@ -144,15 +281,34 @@ export default function Groups() {
 
           ) : (
 
-            /* Groups */
+            /* ==================================
+               Groups
+            ================================== */
 
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 mt-10">
 
               {groups.map((group) => {
 
-                const members = Array.isArray(group.members)
+                const members = Array.isArray(
+                  group.members
+                )
                   ? group.members
                   : [];
+
+                // ------------------------------
+                // Group Owner
+                // ------------------------------
+
+                const ownerId =
+                  typeof group.user === "object"
+                    ? group.user?._id
+                    : group.user;
+
+                const isOwner =
+                  currentUserId &&
+                  ownerId &&
+                  currentUserId.toString() ===
+                    ownerId.toString();
 
                 return (
                   <div
@@ -160,13 +316,15 @@ export default function Groups() {
                     className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6"
                   >
 
-                    {/* Header */}
+                    {/* =================================
+                        Header
+                    ================================= */}
 
                     <div className="flex justify-between items-start gap-4">
 
-                      <div>
+                      <div className="min-w-0">
 
-                        <h2 className="text-2xl font-bold text-slate-800">
+                        <h2 className="text-2xl font-bold text-slate-800 truncate">
                           {group.name}
                         </h2>
 
@@ -183,7 +341,18 @@ export default function Groups() {
 
                     </div>
 
-                    {/* Progress */}
+                    {/* Owner Badge */}
+
+                    {isOwner && (
+                      <div className="mt-4 inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-2 rounded-xl text-sm font-semibold">
+                        <FaCrown />
+                        Group Owner
+                      </div>
+                    )}
+
+                    {/* =================================
+                        Progress
+                    ================================= */}
 
                     <div className="mt-6">
 
@@ -206,7 +375,9 @@ export default function Groups() {
                           style={{
                             width: `${Math.min(
                               Math.max(
-                                Number(group.progress || 0),
+                                Number(
+                                  group.progress || 0
+                                ),
                                 0
                               ),
                               100
@@ -218,7 +389,9 @@ export default function Groups() {
 
                     </div>
 
-                    {/* Invite Code */}
+                    {/* =================================
+                        Invite Code
+                    ================================= */}
 
                     <div className="mt-6 bg-purple-50 rounded-2xl p-4">
 
@@ -234,7 +407,9 @@ export default function Groups() {
 
                         <button
                           onClick={() =>
-                            copyInviteCode(group.inviteCode)
+                            copyInviteCode(
+                              group.inviteCode
+                            )
                           }
                           className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl"
                           title="Copy invite code"
@@ -246,18 +421,17 @@ export default function Groups() {
 
                     </div>
 
-                    {/* Members */}
+                    {/* =================================
+                        Members
+                    ================================= */}
 
                     <div className="mt-6">
 
                       <div className="flex items-center justify-between">
 
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
-
                           <FaUsers className="text-indigo-600" />
-
                           Members
-
                         </h3>
 
                         <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">
@@ -266,7 +440,7 @@ export default function Groups() {
 
                       </div>
 
-                      <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                      <div className="mt-3 space-y-2 max-h-52 overflow-y-auto">
 
                         {members.length === 0 ? (
 
@@ -276,41 +450,92 @@ export default function Groups() {
 
                         ) : (
 
-                          members.map((member) => (
+                          members.map((member) => {
 
-                            <div
-                              key={member._id}
-                              className="flex items-center gap-3 bg-slate-50 rounded-xl p-3"
-                            >
+                            const memberId =
+                              member?._id?.toString();
 
-                              <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+                            const isMemberOwner =
+                              ownerId &&
+                              memberId &&
+                              ownerId.toString() ===
+                                memberId;
 
-                                {(
-                                  member.name ||
-                                  member.email ||
-                                  "U"
-                                )
-                                  .charAt(0)
-                                  .toUpperCase()}
+                            const isRemoving =
+                              removingId ===
+                              member?._id;
+
+                            return (
+                              <div
+                                key={member._id}
+                                className="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3"
+                              >
+
+                                {/* Member Info */}
+
+                                <div className="flex items-center gap-3 min-w-0">
+
+                                  <div className="w-9 h-9 shrink-0 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+
+                                    {(
+                                      member.name ||
+                                      member.email ||
+                                      "U"
+                                    )
+                                      .charAt(0)
+                                      .toUpperCase()}
+
+                                  </div>
+
+                                  <div className="min-w-0">
+
+                                    <p className="font-semibold text-sm truncate">
+                                      {member.name ||
+                                        "Unnamed User"}
+                                    </p>
+
+                                    <p className="text-xs text-gray-500 truncate">
+                                      {member.email || ""}
+                                    </p>
+
+                                  </div>
+
+                                </div>
+
+                                {/* Owner / Remove */}
+
+                                {isMemberOwner ? (
+
+                                  <span className="shrink-0 flex items-center gap-1 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
+                                    <FaCrown />
+                                    Owner
+                                  </span>
+
+                                ) : isOwner ? (
+
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveMember(
+                                        group,
+                                        member
+                                      )
+                                    }
+                                    disabled={isRemoving}
+                                    className="shrink-0 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Remove member"
+                                  >
+                                    <FaTrash />
+
+                                    {isRemoving
+                                      ? "Removing..."
+                                      : "Remove"}
+                                  </button>
+
+                                ) : null}
 
                               </div>
-
-                              <div className="min-w-0">
-
-                                <p className="font-semibold text-sm truncate">
-                                  {member.name ||
-                                    "Unnamed User"}
-                                </p>
-
-                                <p className="text-xs text-gray-500 truncate">
-                                  {member.email || ""}
-                                </p>
-
-                              </div>
-
-                            </div>
-
-                          ))
+                            );
+                          })
 
                         )}
 
@@ -318,28 +543,58 @@ export default function Groups() {
 
                     </div>
 
-                    {/* Actions */}
+                    {/* =================================
+                        Share + Open
+                    ================================= */}
 
                     <div className="grid grid-cols-2 gap-3 mt-6">
 
                       <button
                         onClick={() =>
-                          copyInviteLink(group.inviteCode)
+                          copyInviteLink(
+                            group.inviteCode
+                          )
                         }
-                        className="bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold text-sm"
+                        className="bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition"
                       >
                         🔗 Share Link
                       </button>
 
                       <Link
                         to={`/subject/${group._id}`}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition"
                       >
                         Open
                         <FaExternalLinkAlt />
                       </Link>
 
                     </div>
+
+                    {/* =================================
+                        Leave Group
+                    ================================= */}
+
+                    {!isOwner && (
+
+                      <button
+                        onClick={() =>
+                          handleLeaveGroup(group)
+                        }
+                        disabled={
+                          leavingId === group._id
+                        }
+                        className="w-full mt-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+
+                        <FaSignOutAlt />
+
+                        {leavingId === group._id
+                          ? "Leaving..."
+                          : "Leave Group"}
+
+                      </button>
+
+                    )}
 
                   </div>
                 );
