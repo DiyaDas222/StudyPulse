@@ -4,7 +4,7 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 
 import Dashboard from "../pages/dashboard/Dashboard";
-import SubjectDetails from "../pages/Subject/SubjectDetails"; SubjectDetails from "../pages/subject/SubjectDetails";
+import SubjectDetails from "../pages/Subject/SubjectDetails"; 
 import ExploreSubjects from "../pages/explore/ExploreSubjects";
 import Profile from "../pages/profile/Profile";
 import Groups from "../pages/groups/Groups";
